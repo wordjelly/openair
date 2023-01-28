@@ -68,7 +68,7 @@ class Openair::Base
 				arr << k.gsub(/^\s*\d+\./,'')	
 			end
 		end
-		arr
+		arr.select{|c| !c.strip.blank?}.map{|r| r.strip}
 	end
 
 	# yields : the text of the first choice in the completion
