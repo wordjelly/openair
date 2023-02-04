@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    openair (0.1.0)
+    openair (0.1.2)
       activesupport
       typhoeus
 
@@ -43,7 +43,7 @@ GEM
     thread_safe (0.3.6)
     typhoeus (1.4.0)
       ethon (>= 0.9.0)
-    tzinfo (1.2.10)
+    tzinfo (1.2.11)
       thread_safe (~> 0.1)
     unicode-display_width (2.4.2)
 

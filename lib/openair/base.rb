@@ -80,11 +80,12 @@ class Openair::Base
 			if body["choices"]
 				unless body["choices"].blank?
 					unless body["choices"][0]["text"].blank?
-						yield([body["choices"][0]["text"]]) if block_given?
+						return ([body["choices"][0]["text"]])
 					end
 				end
 			end
 		end
+		return []
 	end
 
 
