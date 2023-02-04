@@ -63,7 +63,7 @@ class Openair::Base
 	## @return[Array] : strings containing the actual list content.
 	def numbered_completion_choices(args={})
 		arr = []
-		completion_choices_text(args) do |text|
+		completion_choices_text(args).each do |text|
 			text.split("\n").each do |k|
 				arr << k.gsub(/^\s*\d+\./,'')	
 			end
@@ -80,7 +80,7 @@ class Openair::Base
 			if body["choices"]
 				unless body["choices"].blank?
 					unless body["choices"][0]["text"].blank?
-						yield(body["choices"][0]["text"]) if block_given?
+						yield([body["choices"][0]["text"]]) if block_given?
 					end
 				end
 			end
