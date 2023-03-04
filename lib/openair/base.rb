@@ -8,11 +8,28 @@ class Openair::Base
 		self.api_key = ENV["OPEN_AI_API_KEY"]
 	end
 
-	def base_url
-		"https://api.openai.com/v1/"
+	def completion_base_url
+		"https://api.openai.com/v1/chat/completions"
+		#"https://api.openai.com/v1/"
 	end
 
+
+
 	def completion_defaults
+		{
+			"body" => {
+				"model" => "gpt-3.5-turbo",
+				"temperature" => 0.7,
+				"max_tokens" => 1000
+			},
+			"url" => "completions",
+			"method" => "POST",
+			"headers" => {
+				"Content-Type" => "application/json",
+				"Authorization" => "Bearer #{self.api_key}"
+			}
+		}
+=begin
 		{
 			"body" => {
 				"model" => "text-davinci-003",
@@ -26,6 +43,7 @@ class Openair::Base
 				"Authorization" => "Bearer #{self.api_key}"
 			}
 		}
+=end
 	end
 
 	## A DUMMY RESPONSE TO TEST THE NUMBERED CHOICES REGEXES.
@@ -55,6 +73,7 @@ class Openair::Base
 		return response
 	end
 
+=begin
 	## sometimes we ask for a list of things.
 	## gpt3 usually returns a bunch of items, delineated by a newline, and all starting with a digit.
 	## so something like :
@@ -105,4 +124,57 @@ class Openair::Base
 		return response
 		
 	end
+=end
+
+	## sometimes we ask for a list of things.
+	## gpt3 usually returns a bunch of items, delineated by a newline, and all starting with a digit.
+	## so something like :
+	## "\n\n1. dog\n2. cat\n3. rat\n4. pig
+	## will return [dog,cat,rat,pig]
+	## @return[Array] : strings containing the actual list content.
+	def numbered_completion_choices(args={})
+		arr = []
+		chat_choices_text(args).each do |text|
+			text.split("\n").each do |k|
+				arr << k.gsub(/^\s*\d+\./,'')	
+			end
+		end
+		arr.select{|c| !c.strip.blank?}.map{|r| r.strip}
+	end
+
+	# yields : the text of the first choice in the completion
+	# only yields if we got a 200 response.
+	def completion_choices_text(args={},&block)
+		response = chat(args)
+		if response.code.to_s == "200"
+			body = JSON.parse(response.body)
+			if body["choices"]
+				unless body["choices"].blank?
+					unless body["choices"][0]["message"].blank?
+						unless body["choices"][0]["message"]["content"].blank?
+							return ([body["choices"][0]["message"]["content"]])
+						end
+					end
+				end
+			end
+		end
+		return []
+	end
+
+
+	def completion(args={})
+		defaults = chat_defaults
+
+		defaults = defaults.deep_merge(args)
+		
+		url = (base_url + defaults.delete("url"))
+
+		return args["response"] if args["response"]
+
+		raise "messages array must not be empty in chat mode" if defaults["body"]["messages"]blank?
+
+		response = Typhoeus::Request.new(url,method: defaults["method"],body: JSON.generate(defaults["body"]),headers: defaults["headers"]).run
+		return response
+	end
+
 end
