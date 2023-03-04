@@ -12,11 +12,13 @@ class TestOpenair < Minitest::Test
 
   def test_base_completion
     openair = Openair::Base.new
-    openair.completion({"body" => {"prompt" => "dog is cat"}})
+    puts openair.numbered_completion_choices({"body" => {"prompt" => "Give me a list of the 10 best places to visit in Paris"}})
   end
 
+=begin
   def test_it_gets_the_numbered_choices
     openair = Openair::Base.new
     puts (openair.numbered_completion_choices({"body" => {"prompt" => "dog is what kind of animal"}, "response" => openair.numbered_completion_dummy_response}))
   end
+=end
 end

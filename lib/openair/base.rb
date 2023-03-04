@@ -8,8 +8,8 @@ class Openair::Base
 		self.api_key = ENV["OPEN_AI_API_KEY"]
 	end
 
-	def completion_base_url
-		"https://api.openai.com/v1/chat/completions"
+	def base_url
+		"https://api.openai.com/v1/"
 		#"https://api.openai.com/v1/"
 	end
 
@@ -22,7 +22,7 @@ class Openair::Base
 				"temperature" => 0.7,
 				"max_tokens" => 1000
 			},
-			"url" => "completions",
+			"url" => "chat/completions",
 			"method" => "POST",
 			"headers" => {
 				"Content-Type" => "application/json",
@@ -134,7 +134,7 @@ class Openair::Base
 	## @return[Array] : strings containing the actual list content.
 	def numbered_completion_choices(args={})
 		arr = []
-		chat_choices_text(args).each do |text|
+		completion_choices_text(args).each do |text|
 			text.split("\n").each do |k|
 				arr << k.gsub(/^\s*\d+\./,'')	
 			end
@@ -145,9 +145,12 @@ class Openair::Base
 	# yields : the text of the first choice in the completion
 	# only yields if we got a 200 response.
 	def completion_choices_text(args={},&block)
-		response = chat(args)
+		response = completion(args)
+		#puts response.code.to_s
+		#puts response.body.to_s
 		if response.code.to_s == "200"
 			body = JSON.parse(response.body)
+			#puts body.to_s
 			if body["choices"]
 				unless body["choices"].blank?
 					unless body["choices"][0]["message"].blank?
@@ -157,21 +160,41 @@ class Openair::Base
 					end
 				end
 			end
+		else
+			puts "got a non 200 response code from OPENAI #{response.code}, with error #{response.body}"
 		end
 		return []
 	end
 
 
 	def completion(args={})
-		defaults = chat_defaults
+		defaults = completion_defaults
 
 		defaults = defaults.deep_merge(args)
 		
 		url = (base_url + defaults.delete("url"))
 
+		#puts "final url is #{url}"
+
 		return args["response"] if args["response"]
 
-		raise "messages array must not be empty in chat mode" if defaults["body"]["messages"]blank?
+		if defaults["body"]["prompt"] and defaults["body"]["messages"].blank?
+			defaults["body"]["messages"] = [
+				{
+					"role" => "user",
+					"content" => defaults["body"].delete("prompt")
+				}
+			]
+		end
+
+		if defaults["body"]["messages"].blank?
+			raise "messages array must not be empty in chat mode" 
+		end
+
+		#puts "url #{url}"
+		#puts "method #{defaults["method"]}"
+		#puts "body #{JSON.pretty_generate(defaults["body"])}"
+		#puts "headers #{defaults["headers"]}"
 
 		response = Typhoeus::Request.new(url,method: defaults["method"],body: JSON.generate(defaults["body"]),headers: defaults["headers"]).run
 		return response

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    openair (0.1.2)
+    openair (0.1.5)
       activesupport
       typhoeus
 
