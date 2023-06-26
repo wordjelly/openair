@@ -142,6 +142,21 @@ class Openair::Base
 		arr.select{|c| !c.strip.blank?}.map{|r| r.strip}
 	end
 
+	def parse_response(response)
+		body = JSON.parse(response.body)
+		#puts body.to_s
+		if body["choices"]
+			unless body["choices"].blank?
+				unless body["choices"][0]["message"].blank?
+					unless body["choices"][0]["message"]["content"].blank?
+						return ([body["choices"][0]["message"]["content"]])
+					end
+				end
+			end
+		end
+		return []
+	end
+
 	# yields : the text of the first choice in the completion
 	# only yields if we got a 200 response.
 	def completion_choices_text(args={},&block)
@@ -149,19 +164,19 @@ class Openair::Base
 		#puts response.code.to_s
 		#puts response.body.to_s
 		if response.code.to_s == "200"
-			body = JSON.parse(response.body)
-			#puts body.to_s
-			if body["choices"]
-				unless body["choices"].blank?
-					unless body["choices"][0]["message"].blank?
-						unless body["choices"][0]["message"]["content"].blank?
-							return ([body["choices"][0]["message"]["content"]])
-						end
-					end
-				end
-			end
+			return parse_response(response)
 		else
 			puts "got a non 200 response code from OPENAI #{response.code}, with error #{response.body}"
+			if (response.code.to_s == "503")
+				puts "sleeping 10 seconds since its hit a timeout."
+				sleep(10)
+				response = completion(args)
+				if response.code.to_s == "200"
+					return parse_response(response)
+				else
+					puts "again hit non 200 response coee."
+				end
+			end
 		end
 		return []
 	end
