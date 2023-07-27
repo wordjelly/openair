@@ -10,10 +10,7 @@ class Openair::Base
 
 	def base_url
 		"https://api.openai.com/v1/"
-		#"https://api.openai.com/v1/"
 	end
-
-
 
 	def completion_defaults
 		{
@@ -157,28 +154,62 @@ class Openair::Base
 		return []
 	end
 
-	# yields : the text of the first choice in the completion
-	# only yields if we got a 200 response.
-	def completion_choices_text(args={},&block)
-		response = completion(args)
-		#puts response.code.to_s
-		#puts response.body.to_s
-		if response.code.to_s == "200"
-			return parse_response(response)
-		else
-			puts "got a non 200 response code from OPENAI #{response.code}, with error #{response.body}"
-			if (response.code.to_s == "503")
-				puts "sleeping 10 seconds since its hit a timeout."
-				sleep(10)
-				response = completion(args)
-				if response.code.to_s == "200"
-					return parse_response(response)
+	def retryable_completion(args,max_retry=1)
+		init_count = 0
+		
+		resp = nil
+
+		while init_count <= max_retry
+
+			response = completion(args)
+			
+			resp = nil
+
+			if response.code.to_s == "200"
+				resp = parse_response(response)
+				if args[:parse_as_json]
+					begin
+						resp = JSON.parse(resp)
+						break
+					rescue => e
+						retryable_completion(args,0)
+					end
 				else
-					puts "again hit non 200 response coee."
+					break
+				end
+			else
+				puts "got a non 200 response code from OPENAI #{response.code}, with error #{response.body}"
+				if (response.code.to_s == "503" or response.code.to_s == "429")
+					puts "sleeping 61 seconds since its hit a timeout."
+					sleep(61)
+					response = completion(args)
+					if response.code.to_s == "200"
+						resp = parse_response(response)
+						if args[:parse_as_json]
+							begin
+								resp = JSON.parse(resp)
+								break
+							rescue => e
+								retryable_completion(args,0)
+							end
+						else
+							break
+						end
+					else
+						puts "again hit non 200 response coee."
+					end
 				end
 			end
+			init_count += 1
 		end
-		return []
+		return resp
+	end
+
+	# yields : the text of the first choice in the completion
+	# so you call a method, that calls itself.
+	# only yields if we got a 200 response.
+	def completion_choices_text(args={},&block)
+		retryable_completion(args)
 	end
 
 
